@@ -1,27 +1,19 @@
 var HelloApp = module.exports = function() {
-  this.name = 'hello';
+  this.name = 'helloxbee';
 };
 
-HelloApp.prototype.init = function(fog) {
-  var photosensor = fog.provision('photosensor');
-  var led = fog.provision('led');
+HelloApp.prototype.init = function(elroy, cb) {
 
-  led.on('turn-on', function() {
-    console.log('turning on led');
+  elroy.find("device:light:*",function(err,lights){
+    lights.forEach(function(light){
+      elroy.expose(light);
+      light.call('turn-on',function(){});
+    });
+    cb();
   });
 
-  led.on('turn-off', function() {
-    console.log('turning off led');
+  elroy.on('device:light:deviceready',function(light){
+    elroy.expose(light);
+    light.call('turn-on',function(){});
   });
-
-  photosensor.on('change', function(value) {
-    if (value < 100) {
-      led.call('turn-on');
-    } else {
-      led.call('turn-off');
-    }
-  });
-
-  fog.expose('/led', led);
-  fog.expose('/photosensor', photosensor);
 };
