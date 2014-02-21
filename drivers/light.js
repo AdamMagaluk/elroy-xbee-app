@@ -16,7 +16,7 @@ LEDDriver.prototype.init = function(config) {
     .when('off', { allow: ['turn-on', 'toggle', 'dim'] })
     .map('turn-on', this.turnOn)
     .map('turn-off', this.turnOff)
-    .map('dim', this.dim)
+    .map('dim', this.dim,[{ name: 'value', type: 'number' }])
     .map('toggle', this.toggle)
 };
 
