@@ -2,57 +2,33 @@ var path = require('path')
   , fs = require('fs')
   , util = require('util')
   , EventEmitter = require('events').EventEmitter
-  , XbeeHardwareDriver = require('fake-xbee-module');
+  , XbeeHardwareDriver = require('fake-xbee-module')
+  , XbeeLightMachine = require('../drivers/light');
 
 var XbeeScout = module.exports = function() {
   EventEmitter.call(this);
   this.driver = null;
-  this.options = {port : '/dev/tty.usbserial-A601EM9Z'};
+  this.options = {port : '/dev/tty.usbmodem1411'};
+  this.drivers = ['light'];
 };
 util.inherits(XbeeScout, EventEmitter);
 
-
-XbeeScout.prototype.init = function(registry,cb){
-  var self = this;
+XbeeScout.prototype.init = function(next){
   this.driver = new XbeeHardwareDriver(this.options);
   this.driver.on('packet',this.packet.bind(this));
-  this.driver.open(function(err){
-    if(err)
-      return cb(err);
-
-    registry.json_devices.map(function(device){
-      if(device.type !== 'light')
-        return;
-
-      var data = device.data;
-      var obj = require(path.join('../drivers/light'));
-      registry.setupDevice(obj,data,self.driver);
-    });
-
-    cb();
-  });
+  this.driver.open(next);
 };
 
+// provision registry device
+XbeeScout.prototype.provision = function(device){
+  if(device.type === 'light')
+    return [XbeeLightMachine, device.data, this.driver];
+};
 
-/*
-// Devices in Fog 
-[
-  {
-    class : 'led',
-    name : 'friendly name in sys',
-    id : 'unique_id_within_a_class', this would be an ip/mac/16bit zigbee. Address id for implementation protocol
-    ... data class specific data that is persisted.
-    ... state machine data
-  }
-]
-
- */
 XbeeScout.prototype._assocation = function(packet){
   var type = 'light';
   if(packet.services[0] !== type)
     return;
-
-  var obj = require(path.join('../drivers',type));
 
   var data = {
     name : packet.deviceId,
@@ -61,7 +37,7 @@ XbeeScout.prototype._assocation = function(packet){
     remote16 : packet.remote16,
   };
 
-  this.emit('discover', obj,data,this.driver);
+  this.emit('discover', XbeeLightMachine, data, this.driver);
 };
 
 XbeeScout.prototype.compare = function(a,b){
